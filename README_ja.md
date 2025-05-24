@@ -5,7 +5,7 @@
 
 <div align="center">
 
-[[English](https://github.com/mcp-router/mcp-router/blob/main/README.md) | 日本語]
+[English](https://github.com/mcp-router/mcp-router/blob/main/README.md) | [日本語](https://github.com/mcp-router/mcp-router/blob/main/README_ja.md)
 
 </div>
 
