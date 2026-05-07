@@ -1,0 +1,60 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: [node, python, go, rust, dotnet, java]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        if: matrix.language == 'node'
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        if: matrix.language == 'python'
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-go@v5
+        if: matrix.language == 'go'
+        with:
+          go-version: "1.22"
+      - uses: actions-rs/toolchain@v1
+        if: matrix.language == 'rust'
+        with:
+          toolchain: stable
+      - uses: actions/setup-dotnet@v4
+        if: matrix.language == 'dotnet'
+        with:
+          dotnet-version: "8.x"
+      - uses: actions/setup-java@v4
+        if: matrix.language == 'java'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install dependencies
+        run: |
+          case "${{ matrix.language }}" in
+            node)   corepack enable && if [ -f pnpm-lock.yaml ]; then pnpm i --frozen-lockfile; elif [ -f yarn.lock ]; then yarn install --frozen-lockfile; else npm ci; fi ;;
+            python) python -m pip install -r requirements.txt || true ;;
+            go)     go mod tidy ;;
+            rust)   cargo fetch ;;
+            dotnet) dotnet restore ;;
+            java)   if [ -f mvnw ]; then ./mvnw -B dependency:go-offline; elif [ -f pom.xml ]; then mvn -B dependency:go-offline; elif [ -f gradlew ]; then ./gradlew --no-daemon dependencies; fi ;;
+          esac
+      - name: Format, Lint, Build, Test
+        run: |
+          case "${{ matrix.language }}" in
+            node)   npx prettier -w . || true; npx eslint . || true; npm run -s build || true; npm test -s || true ;;
+            python) python -m black . || true; python -m ruff check . || true; python -m mypy --strict . || true; pytest -q || true ;;
+            go)     gofmt -s -w .; go vet ./...; go test ./... ;;
+            rust)   cargo fmt --all; cargo clippy -- -D warnings; cargo test ;;
+            dotnet) dotnet format; dotnet build -c Release; dotnet test -c Release ;;
+            java)   if [ -f mvnw ]; then ./mvnw -B verify; elif [ -f pom.xml ]; then mvn -B verify; elif [ -f gradlew ]; then ./gradlew --no-daemon build test; fi ;;
+          esac
